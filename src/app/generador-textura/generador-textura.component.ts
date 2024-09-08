@@ -65,15 +65,27 @@ export class GeneradorTexturaComponent implements AfterViewInit {
   private generatePerlinTexture(width: number, height: number, gradientTable: Vector2[]): Uint8ClampedArray {
     const texture = new Uint8ClampedArray(width * height * 4);
 
+    const colorHex1 = '#000055ff';
+    const colorHex2 = '#9999ffff';
+
+    const [r1, g1, b1, a1] = hexToRgba(colorHex1);
+    const [r2, g2, b2, a2] = hexToRgba(colorHex2);
+
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const noiseValue = GeneradorTexturaComponent.perlinNoise(x / 100, y / 100, gradientTable);
-        const normalizedValue = Math.floor((noiseValue + 1) * 64 + 128);
+        const noiseValue1 = GeneradorTexturaComponent.perlinNoise(x / 200, y / 200, gradientTable);
+        const t1 = (noiseValue1 + 1) * 0.5;
+        const noiseValue = GeneradorTexturaComponent.perlinNoise(x / 50, y / 50, gradientTable);
+        const t = t1 * ((noiseValue + 1) * 0.5);
+
+        // Interpolación de colores y alpha
+        const [r, g, b, a] = interpolateColorWithAlpha([r1, g1, b1, a1], [r2, g2, b2, a2], t);
+
         const index = (y * width + x) * 4;
-        texture[index] = normalizedValue;
-        texture[index + 1] = normalizedValue;
-        texture[index + 2] = normalizedValue;
-        texture[index + 3] = 255;
+        texture[index] = r;     // Rojo
+        texture[index + 1] = g; // Verde
+        texture[index + 2] = b; // Azul
+        texture[index + 3] = a; // Alfa (opacidad)
       }
     }
 
@@ -94,9 +106,32 @@ export class GeneradorTexturaComponent implements AfterViewInit {
 
     const gradientTable = GeneradorTexturaComponent.generateGradientTable(1024);
     const texture = this.generatePerlinTexture(width, height, gradientTable);
-    
+
     const imageData = ctx.createImageData(width, height);
     imageData.data.set(texture);
     ctx.putImageData(imageData, 0, 0);
   }
+}
+
+
+function hexToRgba(hex: string): [number, number, number, number] {
+  // Elimina el hash (#) si está presente
+  hex = hex.replace(/^#/, '');
+
+  // Convierte los valores hexadecimales a números enteros
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const a = parseInt(hex.slice(6, 8), 16); // Alpha
+
+  return [r, g, b, a];
+}
+
+function interpolateColorWithAlpha(color1: [number, number, number, number], color2: [number, number, number, number], t: number): [number, number, number, number] {
+  const r = Math.round(color1[0] + t * (color2[0] - color1[0]));
+  const g = Math.round(color1[1] + t * (color2[1] - color1[1]));
+  const b = Math.round(color1[2] + t * (color2[2] - color1[2]));
+  const a = Math.round(color1[3] + t * (color2[3] - color1[3])); // Interpolación del alpha
+
+  return [r, g, b, a];
 }
